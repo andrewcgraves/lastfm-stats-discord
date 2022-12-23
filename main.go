@@ -20,21 +20,13 @@ import (
 
 var dSession *discordgo.Session
 var lastFMApi *lastfm.Api
-
-// var dyn *dynamodb.DynamoDB
 var dyn *dynamodb.Client
 
 func main() {
 	err := godotenv.Load(".env")
-	check(err)
+	// check(err)
 
 	fmt.Println("INIT...")
-
-	// sess, err := dSession.NewSession(&aws.Config{
-	// 	Region: aws.String("us-west-2")},
-	// // Credentials: credentials.NewSharedCredentials("", "default")},
-	// )
-	// check(err)
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("us-west-2"))
 	dyn = dynamodb.NewFromConfig(cfg)
@@ -204,8 +196,6 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 			Type:        discordgo.EmbedTypeArticle,
 			Title:       fmt.Sprintf("%s's plays: %d", user.LastFMName, res.Total),
 			Description: trackInfo,
-			// Thumbnail: &discordgo.MessageEmbedThumbnail{URL: lastFMApi.User.GetInfo()},
-			// Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: i.Member.Avatar},
 		})
 	}
 
