@@ -23,8 +23,8 @@ var lastFMApi *lastfm.Api
 var dyn *dynamodb.Client
 
 func main() {
-	err := godotenv.Load(".env")
-	// check(err)
+	err := godotenv.Load("/.aws/config/.env")
+	check(err)
 
 	fmt.Println("INIT...")
 
