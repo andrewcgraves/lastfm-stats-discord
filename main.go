@@ -142,15 +142,15 @@ var (
 			}
 		},
 		"manual-trigger": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			embeds := _triggerWeeklyDigest()
-
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "Play Statistics",
-					Embeds:  embeds,
+					Content: "manually triggered... (please wait a few seconds)",
 				},
 			})
+			embeds := _triggerWeeklyDigest()
+
+			s.ChannelMessageSendEmbeds(i.ChannelID, embeds)
 		},
 	}
 )
@@ -190,12 +190,12 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 		topArtists, err := lastFMApi.User.GetTopArtists(lastfm.P{
 			"user":   user.LastFMName,
 			"period": "7day",
-			"limit":  3,
+			"limit":  5,
 		})
 		check(err)
 
-		trackInfo := fmt.Sprintf("<@%d>'s top listens.\n", user.DiscordID)
-		artistInfo := fmt.Sprintf("Top Artists.")
+		trackInfo := fmt.Sprintf("**<@%d>'s top listens.**", user.DiscordID)
+		artistInfo := fmt.Sprintf("**Top Artists.**")
 
 		for _, track := range topTracks.Tracks {
 			trackInfo = trackInfo + fmt.Sprintf("\n%s. **%s** by %s (%s)", track.Rank, track.Name, track.Artist.Name, track.PlayCount)
@@ -208,7 +208,7 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 		embeds = append(embeds, &discordgo.MessageEmbed{
 			Type:        discordgo.EmbedTypeArticle,
 			Title:       fmt.Sprintf("%s's plays: %d", user.LastFMName, topTracks.Total),
-			Description: fmt.Sprintf("%s\n%s,", trackInfo, artistInfo),
+			Description: fmt.Sprintf("%s\n\n%s,", trackInfo, artistInfo),
 		})
 	}
 
