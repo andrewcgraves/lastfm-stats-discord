@@ -28,7 +28,7 @@ func main() {
 
 	fmt.Println("INIT...")
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("default"), config.WithRegion("us-west-2"))
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
 	dyn = dynamodb.NewFromConfig(cfg)
 
 	dSession, err = discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
@@ -56,7 +56,7 @@ func main() {
 		registeredCommands[i] = cmd
 	}
 
-	gocron.Every(1).Friday().At("13:00").Do(func() {
+	gocron.Every(1).Saturday().At("12:30").Do(func() {
 		embeds := _triggerWeeklyDigest()
 		dSession.ChannelMessageSendEmbeds(os.Getenv("CHANNEL_ID"), embeds)
 	})
@@ -138,6 +138,7 @@ var (
 						Content: "There was an unexpected error...",
 					},
 				})
+				print(err)
 			}
 		},
 		"manual-trigger": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -179,23 +180,35 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 		user := LastFMEntry{}
 		attributevalue.UnmarshalMap(item, &user)
 
-		res, err := lastFMApi.User.GetTopTracks(lastfm.P{
+		topTracks, err := lastFMApi.User.GetTopTracks(lastfm.P{
 			"user":   user.LastFMName,
 			"period": "7day",
 			"limit":  5,
 		})
 		check(err)
 
-		trackInfo := fmt.Sprintf("<@%d>'s top listens.\n", user.DiscordID)
+		topArtists, err := lastFMApi.User.GetTopArtists(lastfm.P{
+			"user":   user.LastFMName,
+			"period": "7day",
+			"limit":  3,
+		})
+		check(err)
 
-		for _, track := range res.Tracks {
+		trackInfo := fmt.Sprintf("<@%d>'s top listens.\n", user.DiscordID)
+		artistInfo := fmt.Sprintf("Top Artists.")
+
+		for _, track := range topTracks.Tracks {
 			trackInfo = trackInfo + fmt.Sprintf("\n%s. **%s** by %s (%s)", track.Rank, track.Name, track.Artist.Name, track.PlayCount)
+		}
+
+		for _, artist := range topArtists.Artists {
+			artistInfo = artistInfo + fmt.Sprintf("\n%s. %s (%s)", artist.Rank, artist.Name, artist.PlayCount)
 		}
 
 		embeds = append(embeds, &discordgo.MessageEmbed{
 			Type:        discordgo.EmbedTypeArticle,
-			Title:       fmt.Sprintf("%s's plays: %d", user.LastFMName, res.Total),
-			Description: trackInfo,
+			Title:       fmt.Sprintf("%s's plays: %d", user.LastFMName, topTracks.Total),
+			Description: fmt.Sprintf("%s\n%s,", trackInfo, artistInfo),
 		})
 	}
 

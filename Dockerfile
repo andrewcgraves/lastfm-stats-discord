@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY *.go ./
 
-RUN go build -o /discord-bot
+RUN go build -o /discord-bot .
 
 EXPOSE 8080
 
