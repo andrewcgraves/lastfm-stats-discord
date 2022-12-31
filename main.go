@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -57,6 +58,7 @@ func main() {
 	}
 
 	gocron.Every(1).Saturday().At("12:30").Do(func() {
+		dSession.ChannelTyping(os.Getenv("CHANNEL_ID"))
 		embeds := _triggerWeeklyDigest()
 		dSession.ChannelMessageSendEmbeds(os.Getenv("CHANNEL_ID"), embeds)
 	})
@@ -95,18 +97,6 @@ var (
 			Name:        "manual-trigger",
 			Description: "get the weekly lastfm stats for registered users",
 		},
-		// {
-		// 	Name: "set-config",
-		// 	Description: "Set the default behavior for the bot.",
-		// 	Options: []*discordgo.ApplicationCommandOption{
-		// 		{
-		// 			Type: discordgo.ApplicationCommandOptionChannel,
-		// 			Name: "sending-channel",
-		// 			Description: "set the channel for the bot to send messages in",
-		// 			Required: true,
-		// 		},
-		// 	},
-		// },
 	}
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
@@ -155,16 +145,9 @@ var (
 	}
 )
 
-type LastFMTrackResponse struct {
-}
-
 type LastFMEntry struct {
 	DiscordID  int    `dynamodbav:"discordID"`
 	LastFMName string `dynamodbav:"lastFMName"`
-}
-
-func _linkLastFM(s *discordgo.Session, i *discordgo.InteractionCreate) {
-
 }
 
 func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
@@ -194,7 +177,23 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 		})
 		check(err)
 
+		dailyListenCount := "Daily Breakdown: "
+		today := time.Now()
+		dayInSeconds := (time.Hour * 24).Seconds()
+		for i := range [7]int{} {
+			res, err := lastFMApi.User.GetRecentTracks(lastfm.P{
+				"limit": 200,
+				"user":  user.LastFMName,
+				"from":  today.Unix() - (int64(dayInSeconds*float64(i) - 1)),
+				"to":    today.Unix() - (int64(dayInSeconds * float64(i))),
+			})
+
+			check(err)
+			dailyListenCount += fmt.Sprintf("%d:%d ", i, len(res.Tracks))
+		}
+
 		trackInfo := fmt.Sprintf("**<@%d>'s top listens.**", user.DiscordID)
+
 		artistInfo := fmt.Sprintf("**Top Artists.**")
 
 		for _, track := range topTracks.Tracks {
