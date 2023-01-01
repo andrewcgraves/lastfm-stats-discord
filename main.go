@@ -58,7 +58,6 @@ func main() {
 	}
 
 	gocron.Every(1).Saturday().At("12:30").Do(func() {
-		dSession.ChannelTyping(os.Getenv("CHANNEL_ID"))
 		embeds := _triggerWeeklyDigest()
 		dSession.ChannelMessageSendEmbeds(os.Getenv("CHANNEL_ID"), embeds)
 	})
@@ -151,6 +150,7 @@ type LastFMEntry struct {
 }
 
 func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
+	dSession.UpdateListeningStatus("CRUNCHING THE NUMBERS")
 	res, err := dyn.Scan(context.Background(), &dynamodb.ScanInput{
 		TableName: aws.String(os.Getenv("TABLE_NAME")),
 	})
@@ -177,18 +177,17 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 		})
 		check(err)
 
-		dailyListenCount := "Daily Breakdown: "
+		dailyListenCount := "**Daily Breakdown (may be broken):** "
 		today := time.Now()
 		dayInSeconds := (time.Hour * 24).Seconds()
 		for i := range [7]int{} {
 			res, err := lastFMApi.User.GetRecentTracks(lastfm.P{
-				"limit": 200,
-				"user":  user.LastFMName,
-				"from":  today.Unix() - (int64(dayInSeconds*float64(i) - 1)),
-				"to":    today.Unix() - (int64(dayInSeconds * float64(i))),
+				"user": user.LastFMName,
+				"to":   today.Unix() - (int64(dayInSeconds * (float64(i) - 1))),
+				"from": today.Unix() - (int64(dayInSeconds * float64(i))),
 			})
-
 			check(err)
+
 			dailyListenCount += fmt.Sprintf("%d:%d ", i, len(res.Tracks))
 		}
 
@@ -207,10 +206,11 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 		embeds = append(embeds, &discordgo.MessageEmbed{
 			Type:        discordgo.EmbedTypeArticle,
 			Title:       fmt.Sprintf("%s's plays: %d", user.LastFMName, topTracks.Total),
-			Description: fmt.Sprintf("%s\n\n%s,", trackInfo, artistInfo),
+			Description: fmt.Sprintf("%s\n\n%s\n\n%s,", trackInfo, dailyListenCount, artistInfo),
 		})
 	}
 
+	dSession.UpdateListeningStatus("your music :eyes:")
 	return embeds
 }
 
