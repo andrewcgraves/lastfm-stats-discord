@@ -15,8 +15,6 @@ require (
 )
 
 require (
-	github.com/Goscord/goscord v0.0.0-20220904014649-8e274d13b9ec // indirect
-	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.5 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.21 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.27 // indirect
@@ -30,11 +28,15 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.13.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.17.7 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
-	github.com/go-co-op/gocron v1.18.0 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/stretchr/testify v1.8.1 // indirect
+	github.com/zmb3/spotify/v2 v2.3.1 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/oauth2 v0.0.0-20210810183815-faf39c7919d5 // indirect
 	golang.org/x/sys v0.1.0 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
 )

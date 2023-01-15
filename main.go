@@ -15,6 +15,9 @@ import (
 	"github.com/jasonlvhit/gocron"
 	"github.com/joho/godotenv"
 	"github.com/shkh/lastfm-go/lastfm"
+	"github.com/zmb3/spotify/v2"
+	spotifyauth "github.com/zmb3/spotify/v2/auth"
+	"golang.org/x/oauth2/clientcredentials"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -22,6 +25,7 @@ import (
 var dSession *discordgo.Session
 var lastFMApi *lastfm.Api
 var dyn *dynamodb.Client
+var spotifyClient *spotify.Client
 
 func main() {
 	err := godotenv.Load("/.aws/config/.env")
@@ -45,6 +49,20 @@ func main() {
 			h(s, i)
 		}
 	})
+
+	ctx := context.Background()
+	config := clientcredentials.Config{
+		ClientID:     os.Getenv("SPOTIFY_ID"),
+		ClientSecret: os.Getenv("SPOTIFY_SECRET"),
+		TokenURL:     spotifyauth.TokenURL,
+	}
+
+	token, err := config.Token(ctx)
+	if err != nil {
+		log.Fatalf("Coulden't get token %v", err)
+	}
+	httpClient := spotifyauth.New().Client(ctx, token)
+	spotifyClient = spotify.New(httpClient)
 
 	fmt.Println("Starting")
 	err = dSession.Open()
@@ -203,10 +221,20 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 			artistInfo = artistInfo + fmt.Sprintf("\n%s. %s (%s)", artist.Rank, artist.Name, artist.PlayCount)
 		}
 
+		artistUrl := "https://media.discordapp.net/attachments/442416724357283841/1063684079431721032/image.png"
+		if len(topArtists.Artists) > 0 {
+			res, err := spotifyClient.Search(context.Background(), topArtists.Artists[0].Name, spotify.SearchTypeArtist)
+			if err != nil {
+				fmt.Printf("ERROR SEARFCHING %e", err)
+			}
+			artistUrl = res.Artists.Artists[0].Images[0].URL
+		}
+
 		embeds = append(embeds, &discordgo.MessageEmbed{
 			Type:        discordgo.EmbedTypeArticle,
 			Title:       fmt.Sprintf("%s's plays: %d", user.LastFMName, topTracks.Total),
 			Description: fmt.Sprintf("%s\n\n%s\n\n%s,", trackInfo, dailyListenCount, artistInfo),
+			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: artistUrl},
 		})
 	}
 
