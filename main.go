@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -34,6 +33,7 @@ func main() {
 	fmt.Println("INIT...")
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
+	check(err)
 	dyn = dynamodb.NewFromConfig(cfg)
 
 	dSession, err = discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
@@ -188,6 +188,17 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 		})
 		check(err)
 
+		// If there are no tracks, skip everything else
+		if len(topTracks.Tracks) <= 0 {
+			embeds = append(embeds, &discordgo.MessageEmbed{
+				Type:        discordgo.EmbedTypeArticle,
+				Title:       fmt.Sprintf("%s's plays: %d", user.LastFMName, topTracks.Total),
+				Description: fmt.Sprintf("**<@%d> listened to nothing this week...**", user.DiscordID),
+				Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: "https://media.discordapp.net/attachments/442416724357283841/1063684079431721032/image.png"},
+			})
+			continue
+		}
+
 		topArtists, err := lastFMApi.User.GetTopArtists(lastfm.P{
 			"user":   user.LastFMName,
 			"period": "7day",
@@ -195,19 +206,19 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 		})
 		check(err)
 
-		dailyListenCount := "**Daily Breakdown (may be broken):** "
-		today := time.Now()
-		dayInSeconds := (time.Hour * 24).Seconds()
-		for i := range [7]int{} {
-			res, err := lastFMApi.User.GetRecentTracks(lastfm.P{
-				"user": user.LastFMName,
-				"to":   today.Unix() - (int64(dayInSeconds * (float64(i) - 1))),
-				"from": today.Unix() - (int64(dayInSeconds * float64(i))),
-			})
-			check(err)
+		// dailyListenCount := "**Daily Breakdown (i fixed it :) ):** "
+		// for i := -7; i >= 0; i++ {
+		// 	res, err := lastFMApi.User.GetRecentTracks(lastfm.P{
+		// 		"user": user.LastFMName,
+		// 		"to":   time.Now().AddDate(0, 0, i+1),
+		// 		"from": time.Now().AddDate(0, 0, i),
+		// 	})
+		// 	check(err)
 
-			dailyListenCount += fmt.Sprintf("%d:%d ", i, len(res.Tracks))
-		}
+		// 	fmt.Printf("res: %+v\n\n%e", res, err)
+
+		// 	dailyListenCount += fmt.Sprintf("%d:%d ", i, res.Total)
+		// }
 
 		trackInfo := fmt.Sprintf("**<@%d>'s top listens.**", user.DiscordID)
 
@@ -221,19 +232,16 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 			artistInfo = artistInfo + fmt.Sprintf("\n%s. %s (%s)", artist.Rank, artist.Name, artist.PlayCount)
 		}
 
-		artistUrl := "https://media.discordapp.net/attachments/442416724357283841/1063684079431721032/image.png"
-		if len(topArtists.Artists) > 0 {
-			res, err := spotifyClient.Search(context.Background(), topArtists.Artists[0].Name, spotify.SearchTypeArtist)
-			if err != nil {
-				fmt.Printf("ERROR SEARFCHING %e", err)
-			}
-			artistUrl = res.Artists.Artists[0].Images[0].URL
+		res, err := spotifyClient.Search(context.Background(), topArtists.Artists[0].Name, spotify.SearchTypeArtist)
+		if err != nil {
+			fmt.Printf("ERROR SEARFCHING %e", err)
 		}
+		artistUrl := res.Artists.Artists[0].Images[0].URL
 
 		embeds = append(embeds, &discordgo.MessageEmbed{
 			Type:        discordgo.EmbedTypeArticle,
 			Title:       fmt.Sprintf("%s's plays: %d", user.LastFMName, topTracks.Total),
-			Description: fmt.Sprintf("%s\n\n%s\n\n%s,", trackInfo, dailyListenCount, artistInfo),
+			Description: fmt.Sprintf("%s\\n\n%s,", trackInfo, artistInfo),
 			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: artistUrl},
 		})
 	}
