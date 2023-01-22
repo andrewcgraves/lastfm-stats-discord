@@ -25,6 +25,7 @@ var dSession *discordgo.Session
 var lastFMApi *lastfm.Api
 var dyn *dynamodb.Client
 var spotifyClient *spotify.Client
+var spotifyConfig clientcredentials.Config
 
 func main() {
 	err := godotenv.Load("/.aws/config/.env")
@@ -32,7 +33,7 @@ func main() {
 
 	fmt.Println("INIT...")
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion("us-west-2"))
 	check(err)
 	dyn = dynamodb.NewFromConfig(cfg)
 
@@ -51,18 +52,13 @@ func main() {
 	})
 
 	ctx := context.Background()
-	config := clientcredentials.Config{
+	spotifyConfig = clientcredentials.Config{
 		ClientID:     os.Getenv("SPOTIFY_ID"),
 		ClientSecret: os.Getenv("SPOTIFY_SECRET"),
 		TokenURL:     spotifyauth.TokenURL,
 	}
 
-	token, err := config.Token(ctx)
-	if err != nil {
-		log.Fatalf("Coulden't get token %v", err)
-	}
-	httpClient := spotifyauth.New().Client(ctx, token)
-	spotifyClient = spotify.New(httpClient)
+	spotifyClient = refreshSpotifyClient(ctx, spotifyConfig)
 
 	fmt.Println("Starting")
 	err = dSession.Open()
@@ -232,11 +228,16 @@ func _triggerWeeklyDigest() []*discordgo.MessageEmbed {
 			artistInfo = artistInfo + fmt.Sprintf("\n%s. %s (%s)", artist.Rank, artist.Name, artist.PlayCount)
 		}
 
+		spotifyClient = refreshSpotifyClient(context.Background(), spotifyConfig)
+
 		res, err := spotifyClient.Search(context.Background(), topArtists.Artists[0].Name, spotify.SearchTypeArtist)
+		var artistUrl string
 		if err != nil {
 			fmt.Printf("ERROR SEARFCHING %e", err)
+			artistInfo = "https://media.discordapp.net/attachments/442416724357283841/1063684079431721032/image.png"
+		} else {
+			artistUrl = res.Artists.Artists[0].Images[0].URL
 		}
-		artistUrl := res.Artists.Artists[0].Images[0].URL
 
 		embeds = append(embeds, &discordgo.MessageEmbed{
 			Type:        discordgo.EmbedTypeArticle,
@@ -267,4 +268,14 @@ func check(err error) {
 	if err != nil {
 		log.Fatalf("ERROR: %s", err)
 	}
+}
+
+func refreshSpotifyClient(ctx context.Context, cfg clientcredentials.Config) *spotify.Client {
+	newToken, err := cfg.TokenSource(ctx).Token()
+	check(err)
+
+	newClient := spotifyauth.New().Client(ctx, newToken)
+	client := spotify.New(newClient)
+
+	return client
 }
