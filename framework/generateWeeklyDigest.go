@@ -20,10 +20,12 @@ func TriggerWeeklyDigest() []*discordgo.MessageEmbed {
 
 	items := res.Items
 	embeds := []*discordgo.MessageEmbed{}
+	users := []LastFMEntry{}
 
 	for _, item := range items {
 		user := LastFMEntry{}
 		attributevalue.UnmarshalMap(item, &user)
+		users = append(users, user)
 
 		topTracks, _ := lastFMApi.User.GetTopTracks(lastfm.P{
 			"user":   user.LastFMName,
@@ -77,6 +79,9 @@ func TriggerWeeklyDigest() []*discordgo.MessageEmbed {
 			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: artistUrl},
 		})
 	}
+
+	graphUrl := GenerateDailyActivityGraph(users)
+	fmt.Println(graphUrl)
 
 	return embeds
 }

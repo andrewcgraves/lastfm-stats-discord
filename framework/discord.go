@@ -34,11 +34,11 @@ func InitDiscordConnection(token string, commands []*discordgo.ApplicationComman
 	}
 
 	for _, guild := range dSession.State.Guilds {
-		activeCommands, err := dSession.ApplicationCommands(dSession.State.User.ID, guild.ID)
-		Check(err)
-		for _, cmd := range activeCommands {
-			dSession.ApplicationCommandDelete(dSession.State.User.ID, guild.ID, cmd.ID)
-		}
+		// activeCommands, err := dSession.ApplicationCommands(dSession.State.User.ID, guild.ID)
+		// Check(err)
+		// for _, cmd := range activeCommands {
+		// 	dSession.ApplicationCommandDelete(dSession.State.User.ID, guild.ID, cmd.ID)
+		// }
 
 		for _, v := range commands {
 			dSession.ApplicationCommandCreate(dSession.State.User.ID, guild.ID, v)

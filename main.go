@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load("/.aws/config/.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		fmt.Printf("Failed to load .env: %e", err)
 	}
@@ -22,6 +22,7 @@ func main() {
 	framework.InitDiscordConnection(os.Getenv("DISCORD_TOKEN"), commands, commandHandlers)
 	framework.InitLastFM(os.Getenv("LASTFM_API_KEY"), os.Getenv("LASTFM_API_SECRET"))
 	framework.InitSpotifyService(os.Getenv("SPOTIFY_ID"), os.Getenv("SPOTIFY_SECRET"))
+	framework.InitBackblaze(os.Getenv("BACKBLAZE_ACCOUNT"), os.Getenv("BACKBLAZE_APPLICATION_KEY"), os.Getenv("BACKBLAZE_BUCKET_NAME"))
 	fmt.Println("Services Started...")
 
 	gocron.Every(1).Saturday().At("12:30").Do(func() {
