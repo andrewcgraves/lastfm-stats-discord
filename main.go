@@ -26,8 +26,8 @@ func main() {
 	fmt.Println("Services Started...")
 
 	gocron.Every(1).Saturday().At("12:30").Do(func() {
-		embeds := framework.TriggerWeeklyDigest()
-		framework.SendEmbedsToChannel(os.Getenv("CHANNEL_ID"), embeds)
+		embeds, url := framework.TriggerWeeklyDigest()
+		framework.SendComplexMessageToChannel(os.Getenv("CHANNEL_ID"), embeds, url)
 	})
 
 	<-gocron.Start()

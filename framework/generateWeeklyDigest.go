@@ -13,7 +13,7 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-func TriggerWeeklyDigest() []*discordgo.MessageEmbed {
+func TriggerWeeklyDigest() ([]*discordgo.MessageEmbed, string) {
 	res, _ := dyn.Scan(context.Background(), &dynamodb.ScanInput{
 		TableName: aws.String(os.Getenv("TABLE_NAME")),
 	})
@@ -80,8 +80,9 @@ func TriggerWeeklyDigest() []*discordgo.MessageEmbed {
 		})
 	}
 
-	graphUrl := GenerateDailyActivityGraph(users)
-	fmt.Println(graphUrl)
+	path := GenerateDailyActivityGraph(users)
+	url, _ := UploadFile(path, path)
+	fmt.Println(url)
 
-	return embeds
+	return embeds, url
 }

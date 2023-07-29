@@ -53,6 +53,9 @@ func TerminateDiscordConnection() {
 	dSession.Close()
 }
 
-func SendEmbedsToChannel(channelId string, embeds []*discordgo.MessageEmbed) {
-	dSession.ChannelMessageSendEmbeds(channelId, embeds)
+func SendComplexMessageToChannel(channelId string, embeds []*discordgo.MessageEmbed, url string) {
+	dSession.ChannelMessageSendComplex(channelId, &discordgo.MessageSend{
+		Content: url,
+		Embeds:  embeds,
+	})
 }
