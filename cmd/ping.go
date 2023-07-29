@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/bwmarrin/discordgo"
 )
 
 func Ping(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	print("Executed Ping Command...")
+	fmt.Println("Executed Ping Command...")
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{

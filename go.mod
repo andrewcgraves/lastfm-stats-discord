@@ -15,6 +15,13 @@ require (
 )
 
 require (
+	github.com/go-echarts/go-echarts/v2 v2.2.6
+	github.com/kurin/blazer v0.5.3
+	github.com/zmb3/spotify/v2 v2.3.1
+	golang.org/x/oauth2 v0.4.0
+)
+
+require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.5 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.21 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.27 // indirect
@@ -32,10 +39,8 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
-	github.com/zmb3/spotify/v2 v2.3.1 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/net v0.5.0 // indirect
-	golang.org/x/oauth2 v0.4.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
