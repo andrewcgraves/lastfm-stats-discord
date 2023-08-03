@@ -38,7 +38,7 @@ func GenerateDailyActivityGraph(users []LastFMEntry) string {
 		chart.Legend(&graph),
 	}
 
-	f, _ := os.Create(fmt.Sprintf("lastfm-stats-%s.png", time.Now().Format(time.DateOnly)))
+	f, _ := os.Create(fmt.Sprintf("lastfm-stats-%s.png", time.Now().Format("2006-01-02")))
 	defer f.Close()
 	graph.Render(chart.PNG, f)
 	return f.Name()
