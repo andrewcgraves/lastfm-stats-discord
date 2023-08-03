@@ -82,6 +82,7 @@ func TriggerWeeklyDigest() ([]*discordgo.MessageEmbed, string) {
 
 	path := GenerateDailyActivityGraph(users)
 	url, _ := UploadFile(path, path)
+	os.Remove(path)
 	fmt.Println(url)
 
 	return embeds, url

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
 
 	"github.com/andrewcgraves/lastfm-stats-discord/cmd"
 	"github.com/andrewcgraves/lastfm-stats-discord/framework"
@@ -19,26 +18,28 @@ func main() {
 	}
 
 	framework.InitDBConnection()
-	framework.InitDiscordConnection(os.Getenv("DISCORD_TOKEN"), commands, commandHandlers)
+	dClient := framework.InitDiscordConnection(os.Getenv("DISCORD_TOKEN"), commands, commandHandlers)
 	framework.InitLastFM(os.Getenv("LASTFM_API_KEY"), os.Getenv("LASTFM_API_SECRET"))
 	framework.InitSpotifyService(os.Getenv("SPOTIFY_ID"), os.Getenv("SPOTIFY_SECRET"))
 	framework.InitBackblaze(os.Getenv("BACKBLAZE_ACCOUNT"), os.Getenv("BACKBLAZE_APPLICATION_KEY"), os.Getenv("BACKBLAZE_BUCKET_NAME"))
 	fmt.Println("Services Started...")
 
+	fmt.Println("Scheduling Gochron")
 	gocron.Every(1).Saturday().At("12:30").Do(func() {
 		embeds, url := framework.TriggerWeeklyDigest()
-		framework.SendComplexMessageToChannel(os.Getenv("CHANNEL_ID"), embeds, url)
+		dClient.SendComplexMessageToChannel(os.Getenv("CHANNEL_ID"), embeds, url)
 	})
 
+	// fmt.Println("Making channels...")
+	// stop := make(chan os.Signal, 1)
+	// signal.Notify(stop, os.Interrupt)
+	// fmt.Println("Press Ctrl+C to exit")
+	// fmt.Println("Starting Gochron")
 	<-gocron.Start()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-	fmt.Printf("Press Ctrl+C to exit\n")
-
-	<-stop
-	fmt.Printf("Gracefully shutting down")
-	framework.TerminateDiscordConnection()
+	// <-stop
+	// fmt.Printf("Gracefully shutting down")
+	// framework.TerminateDiscordConnection(dClient)
 }
 
 var (

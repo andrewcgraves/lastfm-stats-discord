@@ -7,9 +7,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var dSession *discordgo.Session
+type DiscordSession struct {
+	*discordgo.Session
+}
 
-func InitDiscordConnection(token string, commands []*discordgo.ApplicationCommand, commandHandlers map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate)) {
+func InitDiscordConnection(token string, commands []*discordgo.ApplicationCommand, commandHandlers map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate)) DiscordSession {
 	dSession, err := discordgo.New("Bot " + token)
 	Check(err)
 	dSession.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
@@ -47,14 +49,43 @@ func InitDiscordConnection(token string, commands []*discordgo.ApplicationComman
 
 	dSession.UpdateListeningStatus("your music...")
 	fmt.Println("Connected to Discord...")
+
+	return DiscordSession{dSession}
 }
 
-func TerminateDiscordConnection() {
-	dSession.Close()
+// func RefreshCommands() {
+// 	activeGlobalCommands, err := dSession.ApplicationCommands(dSession.State.User.ID, "")
+// 	Check(err)
+// 	for _, cmd := range activeGlobalCommands {
+// 		err = dSession.ApplicationCommandDelete(dSession.State.User.ID, "", cmd.ID)
+// 		Check(err)
+// 	}
+
+// 	for _, guild := range dSession.State.Guilds {
+// 		activeCommands, err := dSession.ApplicationCommands(dSession.State.User.ID, guild.ID)
+// 		Check(err)
+// 		for _, cmd := range activeCommands {
+// 			dSession.ApplicationCommandDelete(dSession.State.User.ID, guild.ID, cmd.ID)
+// 		}
+
+// 		for _, v := range commands {
+// 			dSession.ApplicationCommandCreate(dSession.State.User.ID, guild.ID, v)
+// 		}
+// 	}
+// }
+
+func (s *DiscordSession) terminateDiscordConnection() {
+	s.Close()
 }
 
-func SendComplexMessageToChannel(channelId string, embeds []*discordgo.MessageEmbed, url string) {
-	dSession.ChannelMessageSendComplex(channelId, &discordgo.MessageSend{
+func (s *DiscordSession) GetUserInformation(userId string) (*discordgo.User, error) {
+	s.ChannelMessageSend("787217549842055189", "content")
+	dUser, err := s.User(userId)
+	return dUser, err
+}
+
+func (s *DiscordSession) SendComplexMessageToChannel(channelId string, embeds []*discordgo.MessageEmbed, url string) {
+	s.ChannelMessageSendComplex(channelId, &discordgo.MessageSend{
 		Content: url,
 		Embeds:  embeds,
 	})

@@ -15,10 +15,11 @@ func InitLastFM(key string, secret string) {
 	fmt.Println("Connected to LastFM...")
 }
 
-func GetDailyListeningCountsForWeek(user string) []int {
-	results := make([]int, 7)
+func GetDailyListeningCountsForWeek(user string) ([]time.Time, []float64) {
+	results := make([]float64, 7)
+	timeScale := make([]time.Time, 7)
 	rootDate := time.Now().AddDate(0, 0, -7)
-	fmt.Println(rootDate, time.Now())
+	fmt.Printf("ROOT AND NOW: %d -> %d | %s\n", rootDate.Unix(), time.Now().Unix(), time.Now())
 
 	topTracks, _ := lastFMApi.User.GetRecentTracks(lastfm.P{
 		"user":  user,
@@ -32,9 +33,12 @@ func GetDailyListeningCountsForWeek(user string) []int {
 		if track.Date.Date != "" {
 			t, _ := time.Parse(format, track.Date.Date)
 
-			daysSinceRoot := int(t.Sub(rootDate).Hours() / 24)
-			results[daysSinceRoot]++
+			if t.Unix() > 0 {
+				daysSinceRoot := int(t.Sub(rootDate).Hours() / 24)
+				timeScale[daysSinceRoot] = t
+				results[daysSinceRoot]++
+			}
 		}
 	}
-	return results
+	return timeScale, results
 }

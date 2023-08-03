@@ -3,23 +3,43 @@ package framework
 import (
 	"fmt"
 	"os"
+	"time"
 
-	"github.com/go-echarts/go-echarts/v2/charts"
-	"github.com/go-echarts/go-echarts/v2/opts"
+	chart "github.com/wcharczuk/go-chart/v2"
 )
 
 func GenerateDailyActivityGraph(users []LastFMEntry) string {
-	line := charts.NewLine()
-
-	line.SetXAxis([]string{"-6", "-5", "-4", "-3", "-2", "-1", "0"})
-
-	fmt.Println("PRINTING STATS")
-	for _, user := range users {
-		stats := GetDailyListeningCountsForWeek(user.LastFMName)
-		line.AddSeries(user.LastFMName, []opts.LineData{{Value: stats[0]}, {Value: stats[1]}, {Value: stats[2]}, {Value: stats[3]}, {Value: stats[4]}, {Value: stats[5]}, {Value: stats[6]}})
+	graph := chart.Chart{
+		XAxis: chart.XAxis{
+			Name: "Date",
+		},
+		YAxis: chart.YAxis{
+			Name: "Number of Listens",
+		},
 	}
 
-	f, _ := os.Create("line.html")
-	line.Render(f)
+	for _, user := range users {
+		timeScale, stats := GetDailyListeningCountsForWeek(user.LastFMName)
+		fmt.Printf("%s First Time Scale: %s | %d\n\n", user.LastFMName, timeScale[0], timeScale[0].Unix())
+		for i, t := range timeScale {
+			if t.Unix() <= 0 {
+				timeScale[i] = time.Now().AddDate(0, 0, -7+i)
+			}
+		}
+		graph.Series = append(graph.Series, chart.TimeSeries{
+			Name:    user.LastFMName,
+			YAxis:   chart.YAxisPrimary,
+			XValues: timeScale,
+			YValues: stats,
+		})
+	}
+
+	graph.Elements = []chart.Renderable{
+		chart.Legend(&graph),
+	}
+
+	f, _ := os.Create(fmt.Sprintf("lastfm-stats-%s.png", time.Now().Format(time.DateOnly)))
+	defer f.Close()
+	graph.Render(chart.PNG, f)
 	return f.Name()
 }
