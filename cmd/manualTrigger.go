@@ -12,10 +12,9 @@ func ManualTrigger(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			Content: "manually triggered... (please wait a few seconds)",
 		},
 	})
-	embeds, url := framework.TriggerWeeklyDigest()
 
+	embeds := framework.TriggerWeeklyDigest()
 	s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
-		Content: url,
-		Embeds:  embeds,
+		Embeds: embeds,
 	})
 }

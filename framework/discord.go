@@ -84,9 +84,8 @@ func (s *DiscordSession) GetUserInformation(userId string) (*discordgo.User, err
 	return dUser, err
 }
 
-func (s *DiscordSession) SendComplexMessageToChannel(channelId string, embeds []*discordgo.MessageEmbed, url string) {
+func (s *DiscordSession) SendComplexMessageToChannel(channelId string, embeds []*discordgo.MessageEmbed) {
 	s.ChannelMessageSendComplex(channelId, &discordgo.MessageSend{
-		Content: url,
-		Embeds:  embeds,
+		Embeds: embeds,
 	})
 }

@@ -10,6 +10,7 @@ import (
 
 func GenerateDailyActivityGraph(users []LastFMEntry) string {
 	graph := chart.Chart{
+		Title: "# Of Listens Per Day",
 		XAxis: chart.XAxis{
 			Name: "Date",
 		},

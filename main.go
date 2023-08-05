@@ -26,8 +26,8 @@ func main() {
 
 	fmt.Println("Scheduling Gochron")
 	gocron.Every(1).Saturday().At("12:30").Do(func() {
-		embeds, url := framework.TriggerWeeklyDigest()
-		dClient.SendComplexMessageToChannel(os.Getenv("CHANNEL_ID"), embeds, url)
+		embeds := framework.TriggerWeeklyDigest()
+		dClient.SendComplexMessageToChannel(os.Getenv("CHANNEL_ID"), embeds)
 	})
 
 	// fmt.Println("Making channels...")

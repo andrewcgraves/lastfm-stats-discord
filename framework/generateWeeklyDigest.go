@@ -13,7 +13,7 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-func TriggerWeeklyDigest() ([]*discordgo.MessageEmbed, string) {
+func TriggerWeeklyDigest() []*discordgo.MessageEmbed {
 	res, _ := dyn.Scan(context.Background(), &dynamodb.ScanInput{
 		TableName: aws.String(os.Getenv("TABLE_NAME")),
 	})
@@ -54,7 +54,7 @@ func TriggerWeeklyDigest() ([]*discordgo.MessageEmbed, string) {
 		artistInfo := fmt.Sprintf("**Top Artists.**")
 
 		for _, track := range topTracks.Tracks {
-			trackInfo = trackInfo + fmt.Sprintf("\n%s. **%s** by %s (%s)", track.Rank, track.Name, track.Artist.Name, track.PlayCount)
+			trackInfo = trackInfo + fmt.Sprintf("\n%s. %s by *%s* (%s)", track.Rank, track.Name, track.Artist.Name, track.PlayCount)
 		}
 
 		for _, artist := range topArtists.Artists {
@@ -75,15 +75,22 @@ func TriggerWeeklyDigest() ([]*discordgo.MessageEmbed, string) {
 		embeds = append(embeds, &discordgo.MessageEmbed{
 			Type:        discordgo.EmbedTypeArticle,
 			Title:       fmt.Sprintf("%s's plays: %d", user.LastFMName, topTracks.Total),
-			Description: fmt.Sprintf("%s\\n\n%s,", trackInfo, artistInfo),
+			Description: fmt.Sprintf("%s\n\n%s,", trackInfo, artistInfo),
 			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: artistUrl},
 		})
 	}
-
 	path := GenerateDailyActivityGraph(users)
 	url, _ := UploadFile(path, path)
 	os.Remove(path)
 	fmt.Println(url)
 
-	return embeds, url
+	embeds = append(embeds, &discordgo.MessageEmbed{
+		Type:  discordgo.EmbedTypeImage,
+		Title: "# Of Listens Per Day",
+		Image: &discordgo.MessageEmbedImage{
+			URL: url,
+		},
+	})
+
+	return embeds
 }
