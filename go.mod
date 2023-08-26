@@ -17,6 +17,7 @@ require (
 require (
 	github.com/go-echarts/go-echarts/v2 v2.2.6
 	github.com/kurin/blazer v0.5.3
+	github.com/wcharczuk/go-chart/v2 v2.1.0
 	github.com/zmb3/spotify/v2 v2.3.1
 	golang.org/x/oauth2 v0.4.0
 )
@@ -40,7 +41,6 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
-	github.com/wcharczuk/go-chart/v2 v2.1.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/image v0.0.0-20200927104501-e162460cd6b5 // indirect
 	golang.org/x/net v0.5.0 // indirect

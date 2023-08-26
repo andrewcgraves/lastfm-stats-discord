@@ -6,9 +6,42 @@ import (
 	"time"
 
 	chart "github.com/wcharczuk/go-chart/v2"
+	"github.com/wcharczuk/go-chart/v2/drawing"
 )
 
-func GenerateDailyActivityGraph(users []LastFMEntry) string {
+type Track = struct {
+	NowPlaying string "xml:\"nowplaying,attr,omitempty\""
+	Artist     struct {
+		Name string "xml:\",chardata\""
+		Mbid string "xml:\"mbid,attr\""
+	} "xml:\"artist\""
+	Name       string "xml:\"name\""
+	Streamable string "xml:\"streamable\""
+	Mbid       string "xml:\"mbid\""
+	Album      struct {
+		Name string "xml:\",chardata\""
+		Mbid string "xml:\"mbid,attr\""
+	} "xml:\"album\""
+	Url    string "xml:\"url\""
+	Images []struct {
+		Size string "xml:\"size,attr\""
+		Url  string "xml:\",chardata\""
+	} "xml:\"image\""
+	Date struct {
+		Uts  string "xml:\"uts,attr\""
+		Date string "xml:\",chardata\""
+	} "xml:\"date\""
+}
+
+type UserGraphInformation struct {
+	LastFMName string
+	DiscordId  int
+	Tracks     []Track
+	Color      int
+}
+
+func GenerateDailyActivityGraph(users []UserGraphInformation) string {
+	// func GenerateDailyActivityGraph(users []LastFMEntry) string {
 	graph := chart.Chart{
 		Title: "# Of Listens Per Day",
 		XAxis: chart.XAxis{
@@ -32,6 +65,10 @@ func GenerateDailyActivityGraph(users []LastFMEntry) string {
 			YAxis:   chart.YAxisPrimary,
 			XValues: timeScale,
 			YValues: stats,
+			Style: chart.Style{
+				ClassName:   user.LastFMName,
+				StrokeColor: drawing.ColorFromHex(string(user.Color)),
+			},
 		})
 	}
 

@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load("/.aws/config/.env")
+	err := godotenv.Load("env/.env")
 	if err != nil {
 		fmt.Printf("Failed to load .env: %s", err.Error())
 	}

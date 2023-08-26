@@ -79,9 +79,46 @@ func (s *DiscordSession) terminateDiscordConnection() {
 }
 
 func (s *DiscordSession) GetUserInformation(userId string) (*discordgo.User, error) {
-	s.ChannelMessageSend("787217549842055189", "content")
+	// s.ChannelMessageSend("787217549842055189", "content")
 	dUser, err := s.User(userId)
 	return dUser, err
+}
+
+// Roles will need to be refreshed if we keep them stashed
+func (s *DiscordSession) GetUserRoleColor(guildId, string, userId string) (int, error) {
+	guild, err := s.Guild(guildId)
+
+	if err != nil {
+		return 0, err
+	}
+
+	var topRole *discordgo.Role
+	// topRole := *discordgo.Role
+	// roleMapping := new(map string[]*discordgo.Role)
+
+	// whats the HEX for a role that does not have a color ?
+	// for _, role := range(guild.Roles) {
+	// 	role.
+	// }
+
+	for _, member := range guild.Members {
+		if member.User.ID == userId {
+			for _, roleId := range member.Roles {
+				// TODO: this is bad, replace it with a mapping or something thats generated at runtime or before each call idk
+				role, _ := s.State.Role(guildId, roleId)
+				if err != nil {
+					return 0, err
+				}
+
+				if role.Color != 0 && (topRole == nil || topRole.Position > topRole.Position) {
+					topRole = role
+				}
+			}
+			break
+		}
+	}
+
+	return topRole.Color, nil
 }
 
 func (s *DiscordSession) SendComplexMessageToChannel(channelId string, embeds []*discordgo.MessageEmbed) {
