@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -14,6 +15,8 @@ import (
 )
 
 func TriggerWeeklyDigest() []*discordgo.MessageEmbed {
+	fmt.Printf("Weekly Digest Triggered... %s", time.Now().String())
+
 	res, _ := dyn.Scan(context.Background(), &dynamodb.ScanInput{
 		TableName: aws.String(os.Getenv("TABLE_NAME")),
 	})
@@ -79,18 +82,19 @@ func TriggerWeeklyDigest() []*discordgo.MessageEmbed {
 			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: artistUrl},
 		})
 	}
-	path := GenerateDailyActivityGraph(users)
-	url, _ := UploadFile(path, path)
-	os.Remove(path)
-	fmt.Println(url)
 
-	embeds = append(embeds, &discordgo.MessageEmbed{
-		Type:  discordgo.EmbedTypeImage,
-		Title: "# Of Listens Per Day",
-		Image: &discordgo.MessageEmbedImage{
-			URL: url,
-		},
-	})
+	// path := GenerateDailyActivityGraph(users)
+	// url, _ := UploadFile(path, path)
+	// os.Remove(path)
+	// fmt.Println(url)
+
+	// embeds = append(embeds, &discordgo.MessageEmbed{
+	// 	Type:  discordgo.EmbedTypeImage,
+	// 	Title: "# Of Listens Per Day",
+	// 	Image: &discordgo.MessageEmbedImage{
+	// 		URL: url,
+	// 	},
+	// })
 
 	return embeds
 }
