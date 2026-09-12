@@ -2,7 +2,7 @@ package framework
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -12,19 +12,25 @@ import (
 )
 
 func TriggerWeeklyDigest() []*discordgo.MessageEmbed {
-	res, _ := dyn.Scan(context.Background(), &dynamodb.ScanInput{
+	embeds := []*discordgo.MessageEmbed{}
+
+	res, err := dyn.Scan(context.Background(), &dynamodb.ScanInput{
 		TableName: aws.String(os.Getenv("TABLE_NAME")),
 	})
-
-	fmt.Println(res)
+	if err != nil {
+		log.Printf("failed to scan user table, skipping this week's digest: %s", err)
+		return embeds
+	}
 
 	items := res.Items
-	embeds := []*discordgo.MessageEmbed{}
 	users := []UserGraphInformation{}
 
 	for _, item := range items {
 		user := UserGraphInformation{}
-		attributevalue.UnmarshalMap(item, &user)
+		if err := attributevalue.UnmarshalMap(item, &user); err != nil {
+			log.Printf("failed to unmarshal user entry, skipping: %s", err)
+			continue
+		}
 		users = append(users, user)
 
 		// topTracks, _ := lastFMApi.User.GetTopTracks(lastfm.P{
@@ -79,10 +85,18 @@ func TriggerWeeklyDigest() []*discordgo.MessageEmbed {
 		// 	Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: artistUrl},
 		// })
 	}
-	path := GenerateDailyActivityGraph(users)
-	url, _ := UploadFile(path, path)
-	os.Remove(path)
-	fmt.Println(url)
+	path, err := GenerateDailyActivityGraph(users)
+	if err != nil {
+		log.Printf("failed to generate activity graph: %s", err)
+		return embeds
+	}
+	defer os.Remove(path)
+
+	url, err := UploadFile(path, path)
+	if err != nil {
+		log.Printf("failed to upload activity graph: %s", err)
+		return embeds
+	}
 
 	embeds = append(embeds, &discordgo.MessageEmbed{
 		Type:  discordgo.EmbedTypeImage,
