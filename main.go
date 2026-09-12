@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/andrewcgraves/lastfm-stats-discord/cmd"
@@ -26,6 +27,12 @@ func main() {
 
 	fmt.Println("Scheduling Gochron")
 	gocron.Every(1).Saturday().At("12:30").Do(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("recovered from panic while running weekly digest: %v", r)
+			}
+		}()
+
 		embeds := framework.TriggerWeeklyDigest()
 		dClient.SendComplexMessageToChannel(os.Getenv("CHANNEL_ID"), embeds)
 	})

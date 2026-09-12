@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -20,6 +21,12 @@ func InitDiscordConnection(token string, commands []*discordgo.ApplicationComman
 
 	// handlers for the commands
 	dSession.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("recovered from panic in command handler %q: %v", i.ApplicationCommandData().Name, r)
+			}
+		}()
+
 		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
 			h(s, i)
 		}
@@ -28,22 +35,34 @@ func InitDiscordConnection(token string, commands []*discordgo.ApplicationComman
 	dSession.Open()
 	time.Sleep(time.Second * 2)
 
+	// Command (re)registration is best-effort: a transient Discord API error
+	// here shouldn't take down the whole bot, since the scheduled digest and
+	// any already-registered commands don't depend on it succeeding.
 	activeGlobalCommands, err := dSession.ApplicationCommands(dSession.State.User.ID, "")
-	Check(err)
+	if err != nil {
+		log.Printf("failed to fetch global commands: %s", err)
+	}
 	for _, cmd := range activeGlobalCommands {
-		err = dSession.ApplicationCommandDelete(dSession.State.User.ID, "", cmd.ID)
-		Check(err)
+		if err := dSession.ApplicationCommandDelete(dSession.State.User.ID, "", cmd.ID); err != nil {
+			log.Printf("failed to delete global command %q: %s", cmd.Name, err)
+		}
 	}
 
 	for _, guild := range dSession.State.Guilds {
 		activeCommands, err := dSession.ApplicationCommands(dSession.State.User.ID, guild.ID)
-		Check(err)
+		if err != nil {
+			log.Printf("failed to fetch commands for guild %q: %s", guild.ID, err)
+		}
 		for _, cmd := range activeCommands {
-			dSession.ApplicationCommandDelete(dSession.State.User.ID, guild.ID, cmd.ID)
+			if err := dSession.ApplicationCommandDelete(dSession.State.User.ID, guild.ID, cmd.ID); err != nil {
+				log.Printf("failed to delete command %q for guild %q: %s", cmd.Name, guild.ID, err)
+			}
 		}
 
 		for _, v := range commands {
-			dSession.ApplicationCommandCreate(dSession.State.User.ID, guild.ID, v)
+			if _, err := dSession.ApplicationCommandCreate(dSession.State.User.ID, guild.ID, v); err != nil {
+				log.Printf("failed to create command %q for guild %q: %s", v.Name, guild.ID, err)
+			}
 		}
 	}
 

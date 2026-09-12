@@ -26,7 +26,9 @@ func InitDBConnection() {
 
 func SaveUserConfig(entry LastFMEntry) error {
 	r, err := attributevalue.MarshalMap(entry)
-	Check(err)
+	if err != nil {
+		return err
+	}
 
 	_, err = dyn.PutItem(context.Background(), &dynamodb.PutItemInput{
 		TableName: aws.String(os.Getenv("TABLE_NAME")),
