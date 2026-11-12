@@ -12,7 +12,6 @@ import (
 
 	"github.com/andrewcgraves/lastfm-stats-discord/internal/lastfm"
 	"github.com/andrewcgraves/lastfm-stats-discord/internal/store"
-	"github.com/bwmarrin/discordgo"
 )
 
 type fakeLastFM struct {
@@ -282,17 +281,5 @@ func TestEscape(t *testing.T) {
 	}
 	if Escape("plain text") != "plain text" {
 		t.Error("plain text should be unchanged")
-	}
-}
-
-func TestEmbedLength(t *testing.T) {
-	e := &discordgo.MessageEmbed{
-		Title:       "héllo", // multi-byte characters count once
-		Description: "abc",
-		Footer:      &discordgo.MessageEmbedFooter{Text: "f"},
-		Fields:      []*discordgo.MessageEmbedField{{Name: "n", Value: "vv"}},
-	}
-	if got := embedLength(e); got != 12 {
-		t.Fatalf("embedLength = %d, want 12", got)
 	}
 }

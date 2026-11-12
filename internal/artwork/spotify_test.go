@@ -11,20 +11,37 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-func TestPickImage(t *testing.T) {
-	artists := []spotify.FullArtist{
-		{SimpleArtist: spotify.SimpleArtist{Name: "No Image"}},
-		{SimpleArtist: spotify.SimpleArtist{Name: "Tribute Band"}, Images: []spotify.Image{{URL: "tribute"}}},
-		{SimpleArtist: spotify.SimpleArtist{Name: "The Band"}, Images: []spotify.Image{{URL: "real"}}},
+func TestArtistImagePrefersExactMatch(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"artists":{"items":[
+			{"name":"No Image","images":[]},
+			{"name":"Tribute Band","images":[{"url":"tribute"}]},
+			{"name":"The Band","images":[{"url":"real"}]}
+		]}}`)
+	}))
+	defer srv.Close()
+	s := newSpotify(srv.Client(), spotify.WithBaseURL(srv.URL+"/"))
+
+	for name, want := range map[string]string{
+		"the band":     "real",    // exact match, ignoring case
+		"someone else": "tribute", // otherwise the first result with an image
+	} {
+		if got, err := s.ArtistImage(context.Background(), name); err != nil || got != want {
+			t.Errorf("ArtistImage(%q) = %q, %v; want %q", name, got, err, want)
+		}
 	}
-	if got := pickImage("the band", artists); got != "real" {
-		t.Errorf("exact match: got %q", got)
-	}
-	if got := pickImage("someone else", artists); got != "tribute" {
-		t.Errorf("fallback: got %q", got)
-	}
-	if got := pickImage("x", nil); got != "" {
-		t.Errorf("no results: got %q", got)
+}
+
+func TestArtistImageNoResults(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"artists":{"items":[]}}`)
+	}))
+	defer srv.Close()
+	s := newSpotify(srv.Client(), spotify.WithBaseURL(srv.URL+"/"))
+	if got, err := s.ArtistImage(context.Background(), "x"); err != nil || got != "" {
+		t.Fatalf("got %q, %v; want no image", got, err)
 	}
 }
 

@@ -321,38 +321,64 @@ func TestManualTriggerBuildFailure(t *testing.T) {
 
 func TestManualTriggerWhileBusy(t *testing.T) {
 	h := newHarness(t)
-	h.bot.digestMu.Lock()
-	defer h.bot.digestMu.Unlock()
-	h.bot.onInteraction(h.bot.s, command("manual-trigger"))
-
-	reqs := h.discord.all()
-	if len(reqs) != 1 || !strings.Contains(content(t, reqs[0]), "already being generated") {
-		t.Fatalf("requests = %+v", reqs)
+	building, release := make(chan struct{}), make(chan struct{})
+	h.digest.fn = func(int) (*digest.Digest, error) {
+		close(building)
+		<-release
+		return digestWith(1), nil
 	}
-	data := decode(t, reqs[0])["data"].(map[string]any)
+	first := make(chan struct{})
+	go func() {
+		h.bot.onInteraction(h.bot.s, command("manual-trigger"))
+		close(first)
+	}()
+	<-building
+
+	second := command("manual-trigger")
+	second.ID = "int-2"
+	h.bot.onInteraction(h.bot.s, second)
+	close(release)
+	<-first
+
+	var busy *recorded
+	for _, r := range h.discord.all() {
+		if r.Path == "/interactions/int-2/itok/callback" {
+			busy = &r
+		}
+	}
+	if busy == nil || !strings.Contains(content(t, *busy), "already being generated") {
+		t.Fatalf("second trigger should get a busy notice, requests = %+v", h.discord.all())
+	}
+	data := decode(t, *busy)["data"].(map[string]any)
 	if int(data["flags"].(float64)) != int(discordgo.MessageFlagsEphemeral) {
 		t.Error("busy notice should be ephemeral")
 	}
-	if h.digest.calls != 0 {
-		t.Error("digest should not be built twice at once")
+	if h.digest.calls != 1 {
+		t.Errorf("digest built %d times, want 1", h.digest.calls)
 	}
 }
 
-func TestHandlerPanicIsRecovered(t *testing.T) {
+func TestManualTriggerWorksAfterPanic(t *testing.T) {
 	h := newHarness(t)
-	h.digest.fn = func(int) (*digest.Digest, error) { panic("kaboom") }
+	h.digest.fn = func(call int) (*digest.Digest, error) {
+		if call == 1 {
+			panic("kaboom")
+		}
+		return digestWith(1), nil
+	}
 	h.bot.onInteraction(h.bot.s, command("manual-trigger")) // must not crash the test binary
 
 	reqs := h.discord.all()
-	last := reqs[len(reqs)-1]
-	if !strings.Contains(content(t, last), "Something went wrong") {
+	if last := reqs[len(reqs)-1]; !strings.Contains(content(t, last), "Something went wrong") {
 		t.Fatalf("expected an error reply, got %+v", reqs)
 	}
-	// The digest lock must have been released.
-	if !h.bot.digestMu.TryLock() {
-		t.Fatal("digest lock leaked after panic")
+
+	before := len(reqs)
+	h.bot.onInteraction(h.bot.s, command("manual-trigger"))
+	reqs = h.discord.all()[before:]
+	if len(reqs) != 2 || reqs[1].Path != originalPath || embedCount(t, reqs[1]) != 1 {
+		t.Fatalf("a later trigger should deliver the digest, got %+v", reqs)
 	}
-	h.bot.digestMu.Unlock()
 }
 
 func TestIgnoresOtherInteractionTypes(t *testing.T) {
@@ -470,7 +496,7 @@ func TestStartRetriesUntilCancelled(t *testing.T) {
 	}
 }
 
-func TestRegisterCommandsIsIdempotent(t *testing.T) {
+func TestRegisterCommandsOncePerGuild(t *testing.T) {
 	h := newHarness(t)
 	h.discord.respond = func(recorded) (int, string) { return http.StatusOK, `[]` }
 	h.bot.s.State.User = &discordgo.User{ID: "app-1"}
@@ -484,9 +510,16 @@ func TestRegisterCommandsIsIdempotent(t *testing.T) {
 	if reqs[0].Method != http.MethodPut || reqs[0].Path != "/applications/app-1/guilds/guild-1/commands" {
 		t.Fatalf("unexpected request %+v", reqs[0])
 	}
-	var cmds []map[string]any
-	if err := json.Unmarshal([]byte(reqs[0].Body), &cmds); err != nil || len(cmds) != len(Commands) {
+	var cmds []struct{ Name string }
+	if err := json.Unmarshal([]byte(reqs[0].Body), &cmds); err != nil {
 		t.Fatalf("body = %s (%v)", reqs[0].Body, err)
+	}
+	var names []string
+	for _, c := range cmds {
+		names = append(names, c.Name)
+	}
+	if got := strings.Join(names, ","); got != "ping,link-lastfm,manual-trigger" {
+		t.Fatalf("registered commands = %s", got)
 	}
 }
 

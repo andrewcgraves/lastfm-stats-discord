@@ -154,8 +154,8 @@ func TestGivesUpAfterMaxAttempts(t *testing.T) {
 	if _, err := c.UserInfo(context.Background(), "alice"); err == nil {
 		t.Fatal("expected an error")
 	}
-	if calls.Load() != maxAttempts {
-		t.Fatalf("got %d calls, want %d", calls.Load(), maxAttempts)
+	if calls.Load() != 4 {
+		t.Fatalf("got %d calls, want 4", calls.Load())
 	}
 }
 
@@ -287,9 +287,11 @@ func TestRateLimitSpacesRequests(t *testing.T) {
 	}
 }
 
-func TestFlexIntRejectsGarbage(t *testing.T) {
-	var f flexInt
-	if err := f.UnmarshalJSON([]byte(`"12abc"`)); err == nil {
-		t.Fatal("expected an error")
+func TestGarbageNumbersAreAnError(t *testing.T) {
+	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"toptracks":{"track":[{"name":"S","playcount":"12abc","artist":{"name":"A"}}]}}`)
+	})
+	if tracks, err := c.TopTracks(context.Background(), "u", PeriodWeek, 5); err == nil {
+		t.Fatalf("expected an error, got %+v", tracks)
 	}
 }

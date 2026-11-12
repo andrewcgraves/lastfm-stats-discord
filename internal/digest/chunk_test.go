@@ -2,6 +2,7 @@ package digest
 
 import (
 	"io"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -24,7 +25,7 @@ func TestMessagesRespectEmbedCount(t *testing.T) {
 	}
 	total := 0
 	for _, m := range msgs {
-		if len(m.Embeds) > maxEmbedsPerMessage {
+		if len(m.Embeds) > 10 { // Discord's per-message embed limit
 			t.Fatalf("message has %d embeds", len(m.Embeds))
 		}
 		total += len(m.Embeds)
@@ -35,20 +36,44 @@ func TestMessagesRespectEmbedCount(t *testing.T) {
 }
 
 func TestMessagesRespectCharacterLimit(t *testing.T) {
-	d := &Digest{Embeds: embeds(5, 2000)} // 5 × 2001 characters
-	msgs := d.Messages()
-	if len(msgs) != 3 {
-		t.Fatalf("got %d messages, want 3", len(msgs))
+	// 5 × 2001 characters against Discord's 6000-per-message limit: two fit, three don't.
+	msgs := (&Digest{Embeds: embeds(5, 2000)}).Messages()
+	if got := sizes(msgs); got != "2,2,1" {
+		t.Fatalf("message sizes = %s, want 2,2,1", got)
 	}
+}
+
+func TestCharacterLimitCountsFootersAndFields(t *testing.T) {
+	// 3005 characters each once the footer and field count: 6010 won't fit in one message.
+	e := func() *discordgo.MessageEmbed {
+		return &discordgo.MessageEmbed{
+			Description: strings.Repeat("d", 2990),
+			Footer:      &discordgo.MessageEmbedFooter{Text: "ffffffffff"},
+			Fields:      []*discordgo.MessageEmbedField{{Name: "nn", Value: "vvv"}},
+		}
+	}
+	if got := sizes((&Digest{Embeds: []*discordgo.MessageEmbed{e(), e()}}).Messages()); got != "1,1" {
+		t.Fatalf("message sizes = %s, want 1,1", got)
+	}
+}
+
+func TestCharacterLimitCountsCharactersNotBytes(t *testing.T) {
+	// 3 × 1901 characters = 5703 fits, even though it's over 11,000 bytes.
+	es := embeds(3, 0)
+	for _, e := range es {
+		e.Description = strings.Repeat("é", 1900)
+	}
+	if got := sizes((&Digest{Embeds: es}).Messages()); got != "3" {
+		t.Fatalf("message sizes = %s, want 3", got)
+	}
+}
+
+func sizes(msgs []*discordgo.MessageSend) string {
+	var out []string
 	for _, m := range msgs {
-		n := 0
-		for _, e := range m.Embeds {
-			n += embedLength(e)
-		}
-		if n > maxEmbedCharacters {
-			t.Fatalf("message has %d characters", n)
-		}
+		out = append(out, strconv.Itoa(len(m.Embeds)))
 	}
+	return strings.Join(out, ",")
 }
 
 func TestMessagesEmpty(t *testing.T) {
