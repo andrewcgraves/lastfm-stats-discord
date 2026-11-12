@@ -1,4 +1,8 @@
-*.env
+/env*.env
+.env
 env/
 credentials
 *.html
+*.png
+/discord-bot
+/lastfm-stats-discord
